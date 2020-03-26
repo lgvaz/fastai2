@@ -54,7 +54,7 @@ class DataBlock():
     get_x=get_items=splitter=get_y = None
     blocks,dl_type = (TransformBlock,TransformBlock),TfmdDL
     _methods = 'get_items splitter get_y get_x'.split()
-    def __init__(self, blocks=None, dl_type=None, getters=None, n_inp=1, item_tfms=None, batch_tfms=None, **kwargs):
+    def __init__(self, blocks=None, dl_type=None, getters=None, n_inp=None, item_tfms=None, batch_tfms=None, **kwargs):
         blocks = L(self.blocks if blocks is None else blocks)
         blocks = L(b() if callable(b) else b for b in blocks)
         self.type_tfms = blocks.attrgot('type_tfms', L())
@@ -66,17 +66,17 @@ class DataBlock():
         self.dataloaders = delegates(self.dl_type.__init__)(self.dataloaders)
         self.dls_kwargs = merge(*blocks.attrgot('dls_kwargs', {}))
 
-        self.getters = [noop] * len(self.type_tfms) if getters is None else getters
+        self.n_inp = ifnone(n_inp, max(1, len(blocks)-1))
+        self.getters = ifnone(getters, [noop]*len(self.type_tfms))
         if self.get_x:
-            if len(L(self.get_x)) != n_inp:
-                raise ValueError(f'get_x contains {len(L(self.get_x))} functions, but must contain {n_inp} (one for each input)')
-            self.getters[:n_inp] = L(self.get_x)
+            if len(L(self.get_x)) != self.n_inp:
+                raise ValueError(f'get_x contains {len(L(self.get_x))} functions, but must contain {self.n_inp} (one for each input)')
+            self.getters[:self.n_inp] = L(self.get_x)
         if self.get_y:
-            n_targs = len(self.getters) - n_inp
+            n_targs = len(self.getters) - self.n_inp
             if len(L(self.get_y)) != n_targs:
                 raise ValueError(f'get_y contains {len(L(self.get_y))} functions, but must contain {n_targs} (one for each target)')
-            self.getters[n_inp:] = L(self.get_y)
-        self.n_inp = n_inp
+            self.getters[self.n_inp:] = L(self.get_y)
 
         if kwargs: raise TypeError(f'invalid keyword arguments: {", ".join(kwargs.keys())}')
         self.new(item_tfms, batch_tfms)
