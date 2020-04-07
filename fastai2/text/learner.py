@@ -116,7 +116,8 @@ class LMLearner(TextLearner):
         self.model.reset()
         items = L(self.dls.test_dl(L(text)).items).map(L)
         items = [o[0] for o in pad_input(items, pad_idx=pad_idx)]
-        idxs = idxs_all = torch.stack(items).to(self.dls.device)
+        idxs = torch.stack(items).to(self.dls.device)
+        idxs = idxs_all = idxs.view(-1, idxs.shape[-1])
         for _ in (range(n_words) if no_bar else progress_bar(range(n_words), leave=False)):
             with self.no_bar(): preds,_ = self.get_preds(dl=(idxs[None],))
             res = preds[:,-1]
